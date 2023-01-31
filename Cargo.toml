@@ -16,3 +16,6 @@ version = "*"
 [dependencies.tokio]
 version = "1"
 features = ["full"]
+
+[dependencies.futures]
+version = "*"
