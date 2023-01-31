@@ -33,7 +33,12 @@ async fn main() -> Result<()> {
 async fn get_client() -> Result<impl BaseClient + OAuthClient> {
     let Some(creds) = Credentials::from_env() else { bail!("Credentials::from_env failed.") };
 
-    let scopes = scopes!("user-library-read");
+    let scopes = scopes!(
+        "user-follow-read",
+        "playlist-read-private",
+        "playlist-modify-private",
+        "playlist-modify-public"
+    );
     let Some(oauth) = OAuth::from_env(scopes) else { bail!("OAuth::from_env failed.") };
     let config = Config {
         token_refreshing: true,

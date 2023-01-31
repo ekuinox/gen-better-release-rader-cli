@@ -8,7 +8,7 @@ git = "https://github.com/ekuinox/unofficial-spotify-api-rs"
 
 [dependencies.rspotify]
 version = "*"
-features = ["cli"]
+features = ["cli", "env-file"]
 
 [dependencies.anyhow]
 version = "*"

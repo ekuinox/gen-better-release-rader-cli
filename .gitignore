@@ -13,4 +13,7 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# gen-better-release-rader-cli
 .env
+.*.json
