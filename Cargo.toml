@@ -1,0 +1,18 @@
+[package]
+name = "gen-better-release-rader-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.unofficial-spotify-api]
+git = "https://github.com/ekuinox/unofficial-spotify-api-rs"
+
+[dependencies.rspotify]
+version = "*"
+features = ["cli"]
+
+[dependencies.anyhow]
+version = "*"
+
+[dependencies.tokio]
+version = "1"
+features = ["full"]
