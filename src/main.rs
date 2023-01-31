@@ -18,14 +18,16 @@ async fn main() -> Result<()> {
             client.current_user_followed_artists(None, Some(50)).await?
         };
         artists.extend(resp.items);
-        let Some(next) = resp.next else {
+        let Some(next) = resp.cursors.and_then(|cursor| cursor.after) else {
             break;
         };
         after = Some(next);
     }
+    let len = artists.len();
     for artist in artists {
         println!(" - {}", artist.name);
     }
+    println!("Length: {}", len);
 
     Ok(())
 }
