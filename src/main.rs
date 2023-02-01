@@ -1,7 +1,8 @@
 use anyhow::{bail, Result};
+use chrono::{Duration, NaiveDate, Utc};
 use rspotify::{
     clients::{BaseClient, OAuthClient},
-    model::{AlbumType, Market},
+    model::{AlbumType, FullArtist, Market, SimplifiedAlbum},
     scopes, AuthCodePkceSpotify, Config, Credentials, OAuth,
 };
 
@@ -29,28 +30,30 @@ async fn main() -> Result<()> {
     //     println!(" - {}", artist.name);
     // }
     // println!("Length: {}", len);
-    let results = futures::future::join_all(artists.into_iter().map(|artist| {
-        client.artist_albums_manual(
-            artist.id,
-            Some(AlbumType::Single), // ここVec使えないんか～～～い
-            Some(Market::FromToken),
-            Some(50),
-            None,
-        )
-    }))
-    .await;
+    println!("start get albums");
+    let albums = get_albums(&client, &artists).await;
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    println!("start get singles");
+    let singles = get_singles(&client, &artists).await;
+    // let comilation = get_compilation(&client, &artists).await;
+    // let appears_on = get_appears_on(&client, &artists).await;
 
-    if results.iter().any(|r| r.is_err()) {
-        println!("results include any error");
-    }
-    let albums = results
+    let all_albums = vec![albums, singles].into_iter().flatten().collect::<Vec<_>>();
+
+    let today = Utc::now().date_naive();
+    
+    // 先週の最終日
+    let prev_week = today - Duration::weeks(1);
+
+    let albums = all_albums
         .into_iter()
-        .flatten()
-        .map(|r| r.items)
-        .flatten()
         .filter(|album| {
-            if let Some(release_data) = &album.release_date {
-                release_data.starts_with("2023-01")
+            if let Some(Ok(release_date)) = album
+                .release_date
+                .as_ref()
+                .map(|s| NaiveDate::parse_from_str(&s, "%F"))
+            {
+                release_date > prev_week
             } else {
                 false
             }
@@ -93,5 +96,39 @@ async fn get_client() -> Result<impl BaseClient + OAuthClient> {
     spotify.prompt_for_token(&url).await?;
 
     spotify.write_token_cache().await?;
+
     Ok(spotify)
 }
+
+macro_rules! albums_getter {
+    ($name:ident, $album_type:expr) => {
+        async fn $name(client: &impl OAuthClient, artists: &[FullArtist]) -> Vec<SimplifiedAlbum> {
+            let results = futures::future::join_all(artists.into_iter().map(|artist| {
+                client.artist_albums_manual(
+                    artist.id.clone(),
+                    Some($album_type),
+                    Some(Market::FromToken),
+                    Some(50),
+                    None,
+                )
+            }))
+            .await;
+
+
+            if let Some(e) = results.iter().find_map(|r| r.as_ref().err()) {
+                eprintln!("{e}");
+            }
+        
+            results
+                .into_iter()
+                .flatten()
+                .flat_map(|page| page.items)
+                .collect()
+        }
+    };
+}
+
+albums_getter!(get_albums, AlbumType::Album);
+albums_getter!(get_singles, AlbumType::Single);
+albums_getter!(get_compilation, AlbumType::Compilation);
+albums_getter!(get_appears_on, AlbumType::AppearsOn);
